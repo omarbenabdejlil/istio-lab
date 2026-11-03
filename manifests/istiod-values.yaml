@@ -1,0 +1,17 @@
+# file: istiod-values.yaml
+pilot:
+  autoscaleEnabled: true
+  autoscaleMin: 2            # never run a single istiod in prod
+  autoscaleMax: 5
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+
+meshConfig:
+  accessLogFile: /dev/stdout          # access logs for every proxy
+  accessLogEncoding: JSON             # easy to ship to ELK / Loki
+  outboundTrafficPolicy:
+    mode: REGISTRY_ONLY               # pods can only call known destinations
+  defaultConfig:
+    holdApplicationUntilProxyStarts: true   # no "connection refused" at pod start

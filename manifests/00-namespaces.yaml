@@ -1,0 +1,52 @@
+# file: 00-namespaces.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: storefront
+  labels:
+    istio-injection: enabled
+    exposure: public
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: checkout
+  labels:
+    istio-injection: enabled
+    exposure: pci
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: partners
+  labels:
+    istio-injection: enabled
+    exposure: partners
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: backoffice
+  labels:
+    istio-injection: enabled
+    exposure: internal
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: istio-ingress-public
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: istio-ingress-pci
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: istio-ingress-partners
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: istio-ingress-internal

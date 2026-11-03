@@ -1,0 +1,66 @@
+# file: 10-gateway-public.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: public-gw
+  namespace: istio-ingress-public
+spec:
+  gatewayClassName: istio
+  infrastructure:
+    parametersRef:              # replicas, HPA, PDB for this gateway only
+      group: ""
+      kind: ConfigMap
+      name: public-gw-options
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same            # only the redirect route below
+    - name: https
+      port: 443
+      protocol: HTTPS
+      hostname: "*.globemart.example"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: globemart-wildcard-tls   # e.g. issued by cert-manager
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              exposure: public
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: public-gw-options
+  namespace: istio-ingress-public
+data:
+  horizontalPodAutoscaler: |
+    spec:
+      minReplicas: 3
+      maxReplicas: 50
+  podDisruptionBudget: |
+    spec:
+      minAvailable: 2
+---
+# Redirect all HTTP to HTTPS
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-to-https
+  namespace: istio-ingress-public
+spec:
+  parentRefs:
+    - name: public-gw
+      sectionName: http
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301

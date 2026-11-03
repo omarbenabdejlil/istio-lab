@@ -1,0 +1,15 @@
+# file: 32-egress.yaml
+apiVersion: networking.istio.io/v1
+kind: ServiceEntry
+metadata:
+  name: stripe
+  namespace: checkout
+spec:
+  hosts: ["api.stripe.com"]
+  location: MESH_EXTERNAL
+  resolution: DNS
+  ports:
+    - number: 443
+      name: tls
+      protocol: TLS
+  exportTo: ["."]          # visible to the checkout namespace only

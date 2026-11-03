@@ -1,0 +1,106 @@
+# file: 31-authz.yaml
+# ---------- default deny in every app namespace ----------
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata: { name: deny-all, namespace: storefront }
+spec: {}
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata: { name: deny-all, namespace: checkout }
+spec: {}
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata: { name: deny-all, namespace: partners }
+spec: {}
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata: { name: deny-all, namespace: backoffice }
+spec: {}
+---
+# ---------- storefront: from its gateway, from itself, partners -> catalog ----------
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata: { name: allow-storefront, namespace: storefront }
+spec:
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/istio-ingress-public/sa/public-gw-istio
+    - from:
+        - source:
+            namespaces: ["storefront"]
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata: { name: allow-partners-read-catalog, namespace: storefront }
+spec:
+  selector:
+    matchLabels: { app: catalog }
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/partners/sa/partner-api"]
+      to:
+        - operation:
+            methods: ["GET"]          # partners can read, never write
+---
+# ---------- checkout: only payments-gw and the storefront cart ----------
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata: { name: allow-checkout, namespace: checkout }
+spec:
+  selector:
+    matchLabels: { app: checkout }
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/istio-ingress-pci/sa/payments-gw-istio
+              - cluster.local/ns/storefront/sa/cart
+---
+# ---------- payments: ONLY checkout may call it ----------
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata: { name: allow-payments, namespace: checkout }
+spec:
+  selector:
+    matchLabels: { app: payments }
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/checkout/sa/checkout"]
+      to:
+        - operation:
+            methods: ["POST"]
+            paths: ["/v1/charges", "/v1/refunds"]
+---
+# ---------- partners & backoffice: only from their gateway ----------
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata: { name: allow-partners-gw, namespace: partners }
+spec:
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/istio-ingress-partners/sa/partners-gw-istio
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata: { name: allow-internal-gw, namespace: backoffice }
+spec:
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/istio-ingress-internal/sa/internal-gw-istio

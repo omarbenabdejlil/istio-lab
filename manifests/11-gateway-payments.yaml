@@ -1,0 +1,74 @@
+# file: 11-gateway-payments.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: payments-gw
+  namespace: istio-ingress-pci
+spec:
+  gatewayClassName: istio
+  infrastructure:
+    labels:
+      compliance: pci
+    parametersRef:
+      group: ""
+      kind: ConfigMap
+      name: payments-gw-options
+  listeners:
+    - name: https
+      port: 443
+      protocol: HTTPS
+      hostname: pay.globemart.example
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: pay-globemart-tls        # its own cert, not the wildcard
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: checkout
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payments-gw-options
+  namespace: istio-ingress-pci
+data:
+  horizontalPodAutoscaler: |
+    spec:
+      minReplicas: 3
+      maxReplicas: 10
+  podDisruptionBudget: |
+    spec:
+      minAvailable: 2
+  deployment: |
+    spec:
+      template:
+        spec:
+          nodeSelector:
+            node-pool: pci
+          tolerations:
+            - key: dedicated
+              operator: Equal
+              value: pci
+              effect: NoSchedule
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: checkout
+  namespace: checkout
+spec:
+  parentRefs:
+    - name: payments-gw
+      namespace: istio-ingress-pci
+  hostnames:
+    - pay.globemart.example
+  rules:
+    - backendRefs:
+        - name: checkout
+          port: 8080
+      timeouts:
+        request: 15s

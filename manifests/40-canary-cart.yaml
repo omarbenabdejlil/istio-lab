@@ -1,0 +1,27 @@
+# file: 40-canary-cart.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: cart-canary
+  namespace: storefront
+spec:
+  parentRefs:
+    - name: public-gw
+      namespace: istio-ingress-public
+      sectionName: https
+  hostnames: [api.globemart.example]
+  rules:
+    # 1) internal testers always get v2
+    - matches:
+        - path: { type: PathPrefix, value: /api/cart }
+          headers:
+            - name: x-canary
+              value: always
+      backendRefs:
+        - { name: cart-v2, port: 8080 }
+    # 2) everyone else: weighted split
+    - matches:
+        - path: { type: PathPrefix, value: /api/cart }
+      backendRefs:
+        - { name: cart-v1, port: 8080, weight: 90 }
+        - { name: cart-v2, port: 8080, weight: 10 }

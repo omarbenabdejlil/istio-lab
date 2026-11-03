@@ -1,0 +1,32 @@
+# file: 20-route-storefront.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: storefront
+  namespace: storefront
+spec:
+  parentRefs:
+    - name: public-gw
+      namespace: istio-ingress-public
+      sectionName: https
+  hostnames:
+    - www.globemart.example
+    - api.globemart.example
+  rules:
+    - matches:
+        - path: { type: PathPrefix, value: /api/catalog }
+      backendRefs:
+        - name: catalog
+          port: 8080
+    - matches:
+        - path: { type: PathPrefix, value: /api/cart }
+      backendRefs:
+        - name: cart
+          port: 8080
+      timeouts:
+        request: 5s
+    - matches:
+        - path: { type: PathPrefix, value: / }
+      backendRefs:
+        - name: frontend
+          port: 8080

@@ -1,0 +1,23 @@
+# file: 33-sidecar-scope.yaml
+apiVersion: networking.istio.io/v1
+kind: Sidecar
+metadata:
+  name: default
+  namespace: storefront
+spec:
+  egress:
+    - hosts:
+        - "./*"               # its own namespace
+        - "checkout/*"        # cart -> checkout
+        - "istio-system/*"
+---
+apiVersion: networking.istio.io/v1
+kind: Sidecar
+metadata:
+  name: default
+  namespace: checkout
+spec:
+  egress:
+    - hosts:
+        - "./*"               # includes the Stripe ServiceEntry
+        - "istio-system/*"
